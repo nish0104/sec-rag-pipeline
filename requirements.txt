@@ -1,0 +1,27 @@
+# SEC RAG Pipeline - Dependencies
+
+# --- Phase 1: Ingestion & Parsing ---
+requests==2.31.0
+beautifulsoup4==4.12.3
+lxml==5.2.1
+pandas==2.2.2
+pyarrow==16.0.0          # Parquet read/write
+SQLAlchemy==2.0.30        # SQLite ORM
+
+# --- Phase 2: Embedding & Vector Store ---
+chromadb==0.5.0
+langchain==0.2.0
+langchain-community==0.2.0
+langchain-chroma==0.1.1
+ollama==0.2.0             # Ollama Python client
+
+# --- Phase 3: RAG Chain ---
+langchain-core==0.2.0
+
+# --- Phase 4: Frontend ---
+streamlit==1.35.0
+
+# --- Utilities ---
+python-dotenv==1.0.1
+tqdm==4.66.4
+loguru==0.7.2

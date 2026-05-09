@@ -1,0 +1,23 @@
+﻿# Virtual environment
+venv/
+
+# Data files (too large for GitHub)
+data/raw/
+data/parsed/
+data/embeddings/
+
+# Logs
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
