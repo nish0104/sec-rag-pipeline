@@ -1,93 +1,176 @@
-# SEC Filing ETL + LLM Summarization Engine
+# 📊 SEC Filing ETL + RAG Q&A Engine
 
-A fully local, zero-cost RAG pipeline that fetches SEC 10-K/10-Q filings,
-parses and chunks them, embeds with Ollama, stores in ChromaDB, and answers
-natural language questions about any public company.
+> Ask natural language questions about any public company's official SEC filings — powered by a fully local, zero-cost RAG pipeline.
 
----
-
-## Tech Stack
-
-| Layer | Tool |
-|---|---|
-| Data Source | SEC EDGAR API (free, no key) |
-| Parsing | BeautifulSoup4, lxml |
-| Storage | SQLite (metadata) + Parquet (text) |
-| Embeddings | Ollama (nomic-embed-text) |
-| Vector Store | ChromaDB (local) |
-| LLM | Ollama (Llama 3) |
-| RAG Framework | LangChain |
-| Frontend | Streamlit |
+![Python](https://img.shields.io/badge/Python-3.13-blue?style=flat-square&logo=python)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.35-red?style=flat-square&logo=streamlit)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_DB-green?style=flat-square)
+![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-black?style=flat-square)
+![SEC EDGAR](https://img.shields.io/badge/SEC_EDGAR-Free_API-blue?style=flat-square)
 
 ---
 
-## Project Structure
+## 🧠 What This Project Does
+
+Every public company is legally required to file detailed annual (10-K) and quarterly (10-Q) reports with the SEC. These filings contain critical information about risks, financials, and strategy — but they're often 80,000+ words long.
+
+This project builds an **end-to-end data engineering + AI pipeline** that:
+
+1. **Fetches** official SEC filings from the free EDGAR API for any US ticker
+2. **Parses & cleans** raw HTML into structured sections (Risk Factors, MD&A, Financials, etc.)
+3. **Chunks & embeds** the text using a local Ollama model and stores vectors in ChromaDB
+4. **Answers questions** using a RAG chain that retrieves relevant chunks and feeds them to a local LLM
+5. **Serves everything** through a Bloomberg-style Streamlit web interface
+
+**Zero API costs. Everything runs locally on your machine.**
+
+---
+
+## 🏗️ Architecture
+
+```
+User Question
+     │
+     ▼
+┌─────────────────────────────────────────────────┐
+│              Streamlit Web App                  │
+└────────────────────┬────────────────────────────┘
+                     │
+     ┌───────────────▼───────────────┐
+     │         RAG Chain             │
+     │  (LangChain + Ollama phi3)    │
+     └───────┬───────────────────────┘
+             │
+    ┌────────▼────────┐
+    │   ChromaDB      │  ◄── Vector similarity search
+    │  (Local VectorDB)│
+    └────────▲────────┘
+             │
+    ┌────────┴────────────────────────┐
+    │     Embedding Pipeline          │
+    │  (Ollama nomic-embed-text)      │
+    └────────▲────────────────────────┘
+             │
+    ┌────────┴────────────────────────┐
+    │      ETL Pipeline               │
+    │  EDGAR API → HTML → Clean Text  │
+    │  → Section Split → Parquet      │
+    └─────────────────────────────────┘
+```
+
+---
+
+## 🚀 Features
+
+- **Real financial data** — pulls directly from SEC EDGAR (official US government source)
+- **Fully local AI** — no OpenAI, no Anthropic API, no subscription fees ever
+- **Smart section parsing** — splits filings into Risk Factors, MD&A, Business, Financials
+- **Vector semantic search** — finds relevant content by meaning, not just keywords
+- **Source citations** — every answer shows exactly which section it came from
+- **Multi-ticker support** — index any US public company and switch between them
+- **Bloomberg-style UI** — professional dark terminal aesthetic
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology | Purpose |
+|---|---|---|
+| Data Source | SEC EDGAR API | Free, official SEC filings |
+| ETL | Python, BeautifulSoup, lxml | HTML parsing & cleaning |
+| Storage | Parquet, SQLite | Structured filing storage |
+| Embeddings | Ollama (nomic-embed-text) | Local text → vector conversion |
+| Vector DB | ChromaDB | Semantic similarity search |
+| LLM | Ollama (phi3) | Local answer generation |
+| RAG Framework | LangChain | Retrieval chain orchestration |
+| Frontend | Streamlit | Web interface |
+
+---
+
+## 📁 Project Structure
 
 ```
 sec-rag-pipeline/
 ├── data/
-│   ├── raw/          # Raw HTML/XML filings from EDGAR
-│   ├── parsed/       # Cleaned text + metadata (Parquet)
+│   ├── raw/          # Downloaded HTML filings from SEC
+│   ├── parsed/       # Cleaned text saved as Parquet files
 │   └── embeddings/   # ChromaDB vector store
 ├── src/
-│   ├── ingestion/    # EDGAR API fetcher
-│   ├── parsing/      # HTML → clean text + section splitter
-│   ├── embedding/    # Chunking + Ollama embedding + ChromaDB
-│   └── rag/          # LangChain retrieval chain
-├── notebooks/        # Exploration notebooks
-├── app.py            # Streamlit frontend
-├── pipeline.py       # End-to-end pipeline runner
+│   ├── ingestion/
+│   │   └── edgar_fetcher.py    # SEC EDGAR API client
+│   ├── parsing/
+│   │   └── filing_parser.py    # HTML → clean text + section splitter
+│   ├── embedding/
+│   │   └── embedder.py         # Chunking + Ollama embedding + ChromaDB
+│   └── rag/
+│       └── chain.py            # LangChain RAG retrieval chain
+├── pipeline.py       # Master ETL orchestrator
+├── app.py            # Streamlit web application
 └── requirements.txt
 ```
 
 ---
 
-## Setup
+## ⚙️ Setup & Installation
 
-### 1. Install dependencies
+### Prerequisites
+- Python 3.10+
+- [Ollama](https://ollama.com) installed
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/nish0104/sec-rag-pipeline.git
+cd sec-rag-pipeline
+```
+
+### 2. Create virtual environment
+```bash
+python -m venv venv
+venv\Scripts\activate      # Windows
+source venv/bin/activate   # Mac/Linux
+```
+
+### 3. Install dependencies
 ```bash
 pip install -r requirements.txt
+pip install langchain-ollama langchain-text-splitters
 ```
 
-### 2. Install Ollama
+### 4. Pull Ollama models
 ```bash
-# Mac/Linux
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Pull the models you need
-ollama pull llama3
 ollama pull nomic-embed-text
+ollama pull phi3
 ```
 
-### 3. Run the pipeline for a company
+### 5. Run the full pipeline
 ```bash
-# Fetch + parse + embed filings for Apple (ticker: AAPL)
 python pipeline.py --ticker AAPL --form 10-K --limit 3
-```
-
-### 4. Launch the Streamlit app
-```bash
+python -m src.embedding.embedder --ticker AAPL
 streamlit run app.py
 ```
 
 ---
 
-## Usage Example
+## 💬 Example Questions
 
-```python
-from src.rag.chain import SECQueryChain
-
-chain = SECQueryChain(ticker="AAPL")
-answer = chain.ask("What are Apple's top risk factors this year?")
-print(answer)
-```
+- *"What are Apple's main risk factors?"*
+- *"How did revenue change compared to last year?"*
+- *"What is the company's AI strategy?"*
+- *"Are there any significant legal proceedings?"*
 
 ---
 
-## Phases
+## 🔮 Future Improvements
 
-- [x] Phase 1 — EDGAR ingestion & ETL
-- [ ] Phase 2 — Chunking & embedding pipeline
-- [ ] Phase 3 — RAG + LLM Q&A layer
-- [ ] Phase 4 — Streamlit UI
-- [ ] Phase 5 — Polish & portfolio prep
+- [ ] Multi-company comparison (AAPL vs MSFT side by side)
+- [ ] Year-over-year change detection
+- [ ] Automatic financial metric extraction
+- [ ] Deploy to Streamlit Community Cloud
+
+---
+
+## 👩‍💻 Author
+
+**Nishthaben Vaghani**
+- Portfolio: [nishthaben-vaghani.vercel.app](https://nishthaben-vaghani.vercel.app)
+- GitHub: [@nish0104](https://github.com/nish0104)
